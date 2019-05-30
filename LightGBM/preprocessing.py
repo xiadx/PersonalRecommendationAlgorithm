@@ -34,20 +34,6 @@ def train_test_data_df(train_data_file, test_data_file):
     return train_data, test_data
 
 
-def deal_cross_feature(fields, df):
-    """
-    deal cross feature
-    Args:
-        fields: [[field1, field2], [field3, field4, field5]]
-        df: pd.DataFrame
-    Return:
-        df: pd.DafaFrame
-    """
-    for f in fields:
-        df["_".join(f)] = df.apply(lambda r: "_".join([r[x] for x in f]), axis=1)
-    return df
-
-
 def deal_label(field, df):
     """
     deal label
@@ -101,44 +87,6 @@ def deal_discrete_feature(fields, df):
     return df
 
 
-def deal_continuous_feature(fields, df):
-    """
-    deal continuous feature
-    Args:
-        fields: continuous feature field list
-        df: pd.DataFrame
-    Return:
-        df: pd.DataFrame
-    """
-    continuous_feature_df = pd.DataFrame()
-    for field in fields:
-        describe_dict = df[field].describe().to_dict()
-        category_range = [
-            describe_dict["min"],
-            describe_dict["25%"],
-            describe_dict["50%"],
-            describe_dict["75%"],
-            describe_dict["max"]
-        ]
-        continuous_feature_dict = {field + "_" + str(_): [] for _ in range(4)}
-        for value in df[field]:
-            c = -1
-            if category_range[0] <= value < category_range[1]:
-                c = 0
-            elif category_range[1] <= value < category_range[2]:
-                c = 1
-            elif category_range[2] <= value < category_range[3]:
-                c = 2
-            else:
-                c = 3
-            one_hot = [1 if c == i else 0 for i in range(4)]
-            for i, e in enumerate(one_hot):
-                continuous_feature_dict[field+"_"+str(i)].append(e)
-        continuous_feature_df = pd.concat([continuous_feature_df, pd.DataFrame(continuous_feature_dict)], axis=1)
-    df = pd.concat([df, continuous_feature_df], axis=1).drop(fields, axis=1)
-    return df
-
-
 def split_train_test_data(total_data_df, frac):
     """
     split train test data
@@ -187,14 +135,9 @@ def main():
     train_data, test_data = train_test_data_df(train_data_file, test_data_file)
     total_data = pd.concat([train_data, test_data]).reset_index(drop=True)
     total_data = deal_label("class", total_data)
-    fields = [["occupation", "race"], ["occupation", "sex"]]
-    total_data = deal_cross_feature(fields, total_data)
     fields = ["workclass", "education", "marital-status", "occupation",
-              "relationship", "race", "sex", "native-country",
-              "occupation_race", "occupation_sex"]
+              "relationship", "race", "sex", "native-country"]
     total_data = deal_discrete_feature(fields, total_data)
-    fields = ["age", "education-num", "capital-gain", "capital-loss", "hours-per-week"]
-    total_data = deal_continuous_feature(fields, total_data)
     train_data, test_data = split_train_test_data(total_data, 0.3)
     save(train_data, "train.data", "label", ",")
     save(test_data, "test.data", "label", ",")
